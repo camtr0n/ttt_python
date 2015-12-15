@@ -1,3 +1,6 @@
+#!/usr/bin/python
+__author__ = "Camtr0n (Cameron Moore)"
+
 from math import ceil
 from itertools import cycle
 
@@ -14,16 +17,19 @@ COMPUTER = 1
 
 SYMBOLS = ('X', 'O')
 
+VALID_MOVES = {1, 2, 3, 4, 5, 6, 7, 8, 9}
+VALID_GAMETYPES = {0, 1, 2}
+
 # Iterator toggles between players
-turn = cycle((HUMAN, COMPUTER))
+turn = cycle((0, 1))
 
 
 def print_intro():
     print("Welcome to Unbeatable Tic-Tac-Toe!")
     print("Proceed without hope...")
     print("")
-    print("Player one is: ", SYMBOLS[HUMAN])
-    print("Player two is: ", SYMBOLS[COMPUTER])
+    print("Player one is: ", SYMBOLS[0])
+    print("Player two is: ", SYMBOLS[1])
     print("")
     print("Use the number pad to select your move like so:\n")
     print("7 | 8 | 9")
@@ -48,15 +54,34 @@ def print_board(board):
     print("")
 
 
-def is_valid(num):
-    valid_input = {1, 2, 3, 4, 5, 6, 7, 8, 9}
+def is_valid(num, valid):
     try:
-        if int(num) in valid_input:
+        if int(num) in valid:
             return True
         else:
             return False
     except:
         return False
+
+
+def get_game_type():
+    print("This game can be played in the following configurations:")
+    print("[0] Human vs. Human")
+    print("[1] Human vs. Computer")
+    print("[2] Computer vs. Computer")
+    print("")
+    game_type = input("Enter the number corresponding to the game type you would like to play: ")
+    if not is_valid(game_type, VALID_GAMETYPES):
+        return get_game_type()
+
+    if game_type is 0:
+        player_types = (HUMAN, HUMAN)
+    elif game_type is 1:
+        player_types = (HUMAN, COMPUTER)
+    else:
+        player_types = (COMPUTER, COMPUTER)
+
+    return player_types
 
 
 def square_is_taken(row, col, board):
@@ -68,7 +93,7 @@ def get_move(player, board):
     num = input(prompt_text)
 
     # check that number is valid input 1-9
-    if not is_valid(num):
+    if not is_valid(num, VALID_MOVES):
         print("\nInvalid input; Please select a number 1-9.\n ")
         print_board(board)
         return get_move(player, board)
@@ -152,44 +177,77 @@ def get_available_moves(board):
 
 
 def get_opponent(player):
-    if player is COMPUTER:
-        return HUMAN
-    else:
-        return COMPUTER
-
-
-def minimax(board, player):
-    winner = get_winner(board)
-    if winner is SYMBOLS[HUMAN]:
-        return -1
-    elif winner is SYMBOLS[COMPUTER]:
+    if player is 0:
         return 1
-    elif winner is None:
+    else:
         return 0
 
-    moves = get_available_moves(board)
-    scores = [minimax(apply_move(move, board, player), get_opponent(player)) for move in moves]
-    if player is COMPUTER:
-        score = max(scores)
+
+# Expect each score to contain a point value and a depth value
+def score_max(scores):
+    best = (-2, 10)
+    for score in scores:
+        s = score[0]
+        d = score[1]
+        if s > best[0] or (s == best[0] and d <= best[1]):
+            best = score
+    return best
+
+
+def score_min(scores):
+    best = (2, 10)
+    for score in scores:
+        s = score[0]
+        d = score[1]
+        if s < best[0] or (s == best[0] and d <= best[1]):
+            best = score
+    return best
+
+
+def minimax(initiator, board, player, depth):
+    winner = get_winner(board)
+    if winner is SYMBOLS[get_opponent(initiator)]:
+        return -1, depth
+    elif winner is SYMBOLS[initiator]:
+        return 1, depth
+    elif winner is None:
+        return 0, depth
+
+    available_moves = get_available_moves(board)
+
+    scores = [minimax(initiator, apply_move(move, board, player), get_opponent(player), depth + 1) for move in available_moves]
+    if player is initiator:
+        score = score_max(scores)
     else:
-        score = min(scores)
+        score = score_min(scores)
     return score
 
 
-def computers_best(starting_board):
+def computers_best(starting_board, player):
     available_moves = get_available_moves(starting_board)
-    possible_boards = [apply_move(move, starting_board, COMPUTER) for move in available_moves]
-    scores = {board: minimax(board, HUMAN) for board in possible_boards}
-    max_score = max(scores.values())
+    size = len(starting_board)
+
+    # Always take center square if it is available
+    if ((size-1)/2, (size-1)/2) in available_moves:
+        return apply_move(((size-1)/2, (size-1)/2), starting_board, player)
+
+    # Depth in game decision tree that computer's move is starting from
+    depth = size*size - len(available_moves)
+
+    possible_boards = [apply_move(move, starting_board, player) for move in available_moves]
+
+    scores = {board: minimax(player, board, get_opponent(player), depth+1) for board in possible_boards}
+
+    max_score = score_max(scores.values())
     for board, score in scores.items():
         if score == max_score:
             return board
     return
 
 
-def get_next_board(board, player):
-    if player is COMPUTER:
-        next_board = computers_best(board)
+def get_next_board(board, player, player_types):
+    if player_types[player] is COMPUTER:
+        next_board = computers_best(board, player)
         print("\nCOMPUTER HAS DECIDED...")
     else:
         move = get_move(player, board)
@@ -203,23 +261,25 @@ def get_next_board(board, player):
     return next_board
 
 
-def game_turn(board, player):
+def game_turn(board, player, player_types):
     print_board(board)
-    updated_board = get_next_board(board, player)
+    updated_board = get_next_board(board, player, player_types)
     winner = get_winner(updated_board)
     if winner:
         print_board(updated_board)
         print("Player [" + str(player+1) + "] is the WINNER!!! #Sorrynotsorry")
         exit()
     elif winner is None:
+        print_board(updated_board)
         print("DRAW! You just can't win, can  you?")
         exit()
-    game_turn(updated_board, next(turn))
+    game_turn(updated_board, next(turn), player_types)
 
 
 def game():
     print_intro()
-    game_turn(EMPTY_BOARD, next(turn))
+    player_types = get_game_type()
+    game_turn(EMPTY_BOARD, next(turn), player_types)
 
 
 game()
