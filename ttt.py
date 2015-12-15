@@ -73,7 +73,7 @@ def get_game_type():
     game_type = input("Enter the number corresponding to the game type you would like to play: ")
     if not is_valid(game_type, VALID_GAMETYPES):
         return get_game_type()
-
+    game_type = int(game_type)
     if game_type is 0:
         player_types = (HUMAN, HUMAN)
     elif game_type is 1:
@@ -226,10 +226,10 @@ def minimax(initiator, board, player, depth):
 def computers_best(starting_board, player):
     available_moves = get_available_moves(starting_board)
     size = len(starting_board)
-
+    middle_square = int((size-1)/2), int((size-1)/2)
     # Always take center square if it is available
-    if ((size-1)/2, (size-1)/2) in available_moves:
-        return apply_move(((size-1)/2, (size-1)/2), starting_board, player)
+    if middle_square in available_moves:
+        return apply_move(middle_square, starting_board, player)
 
     # Depth in game decision tree that computer's move is starting from
     depth = size*size - len(available_moves)
