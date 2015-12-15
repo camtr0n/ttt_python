@@ -5,7 +5,11 @@ Can be played as a normal human vs. human game as well, or as a spectator to two
 Use the numeric keypad to play moves:
 
  7 | 8 | 9
- ---------
+ 
+ \-\-\-\-\-\-\-\-\-
+ 
  4 | 5 | 6
- ---------
- 1 | 2 | 3
+ 
+  \-\-\-\-\-\-\-\-\-
+  
+  1 | 2 | 3
